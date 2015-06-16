@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+path {
+  stroke: #000;
+  fill-rule: evenodd;
+}
+
+text {
+  font-family: Arial, sans-serif;
+fill: #FFFFE0;
+}
+
+body {
+    background-color: #000;
+      
+}
+
+
+
+</style>
+<body>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+        <script src="js/libs/jquery/jquery-1.10.2.min.js"></script>
+<script>
+
+var width = 13000,
+    height = 8000,
+    radius = Math.min(width, height) / 2.5;
+
+var x = d3.scale.linear()
+    .range([0, 2 * Math.PI]);
+
+var y = d3.scale.sqrt()
+    .range([0, radius]);
+
+var color = d3.scale.category20c();
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height)
+  .append("g")
+    .attr("transform", "translate(" + width / 2 + "," + (height / 2 + 10) + ")");
+
+var partition = d3.layout.partition()
+    .value(function(d) { return d.value; });
+
+var arc = d3.svg.arc()
+    .startAngle(function(d) { return Math.max(0, Math.min(2 * Math.PI, x(d.x))); })
+    .endAngle(function(d) { return Math.max(0, Math.min(2 * Math.PI, x(d.x + d.dx))); })
+     .innerRadius(function(d) { return innerR(d); })
+    .outerRadius(function(d) { if(d.name=="Kerndatensatz Forschung") {return 0;} else {return outerR(d); }});
+    
+    //.innerRadius(function(d) { return Math.max(0, y(d.y)); })
+    //.outerRadius(function(d) { return Math.max(0, y(d.y + d.dy)); });
+
+function innerR(d) {
+    return Math.max(0, y(d.y)); 
+}
+
+function outerR(d) {
+   return Math.max(0, y(d.y + d.dy)-180);
+}
+    var tags = {"NotIncluded":"Nicht empfohlen",
+                "Included":"Empfohlen",
+                "Schale":"Empfohlen als Schale",
+                "Extended":"Empfohlen für spätere Erweiterung",
+                "Task":"^_ld^task_",
+                "DifferenzUniAUF":"Differenz-UniAUF",
+                "AbstErweiterungsteil":"Abstimmung-Erweiterungsteil",
+                "teilweiserForschungsbezug":"Drittmittel mit teilweisem Forschungsbezug",
+                "WR-empfohlenFuerKern":"WR-empfohlenFuerKern",
+                "WR-empfohlenFuerErweiterungsteil":"WR-empfohlenFuerErweiterungsteil",
+                "Destatis-sinnhaft":"Destatis-sinnhaft",
+                "Destatis-detaillierter":"Destatis-detaillierter",
+                "Destatis-generierbar":"Destatis-generierbar",
+                "Destatis (wörtlich)":"Destatis (wörtlich)"
+             
+    };
+    var cEmpfohlen =  "#ABFF66",
+        cErweiterungsteil = "#FFCC66",
+        cNichtEmpfohlen ="#EB9999", 
+        cSchale="#E9AEFF"; //"#CC99FF";
+    var cTEmpfohlen =  "#006600",   //for Texts
+        cTErweiterungsteil = "#CC6600",
+        cTNichtEmpfohlen ="#800000"; 
+
+
+d3.json("data/kdsf-neu.json", function(error, root) {
+  var g = svg.selectAll("g")
+      .data(partition.nodes(root))
+    .enter().append("g");
+
+  var path = g.append("path")
+    .attr("d", arc)
+      .attr("id", function(d,i){return "s"+i;})
+    .attr("stroke-opacity","1")
+    .attr("fill-opacity",function(d){return 1/d.level+0.3;})
+   // .style("fill", function(d) { return color((d.children ? d : d.parent).name); });
+     .style("fill", function(d){
+var codearray=jQuery.makeArray(d.tags);
+
+  if ($.inArray(tags.Extended,codearray )>=0)
+      { return cErweiterungsteil;} 
+  else if ($.inArray(tags.NotIncluded,codearray )>=0)
+      {return cNichtEmpfohlen; }
+  else if ($.inArray(tags.Schale,codearray )>=0)
+      {return cSchale; }    
+  else if ($.inArray(tags.obligatorischWennVorhanden,codearray )>=0)
+      {return cObligatorisch; }    
+  else if ($.inArray(tags.teilweiserForschungsbezug,codearray )>=0)
+      {return cTeilweiserForschungsbezugSchale2; }  
+  else if ($.inArray(tags.PublikationenSchale2,codearray )>=0)
+      {return cTeilweiserForschungsbezugSchale2; }  
+  else if($.inArray(tags.Included,codearray )>=0)
+      {return cEmpfohlen;} 
+  else 
+      {return "#FEFEFE"; }
+  });
+   // .on("click", click);
+
+  var text = g.append("text")
+   // .attr("transform", function(d) { if (d.name=="Kerndatensatz Forschung") {return "rotate(0)";} else {return "rotate(" + computeTextRotation(d) + ")"; }})
+    //.attr("x", function(d) { return y(d.y); })
+    //.attr("dx", function(d){if (d.name=="Kerndatensatz Forschung") {return "0";} else {return "26";}}) // margin
+    //.attr("dy", function(d){if (d.name=="Kerndatensatz Forschung") {return "0em";} else {return "-0.7em";}}) // vertical-align
+    //.attr("text-anchor", function(d){if (d.name=="Kerndatensatz Forschung") {return "middle";} else {return "left";}})
+    .attr("font-size",function(d){if (d.name=="Kerndatensatz Forschung") {return "0";} else {return ((1/d.level)*40+10 + "px");}})
+    .attr("fill-opacity",function(d){return ((1/d.level));})
+     .attr("dy",function(d,i){return -20;})
+  //.attr("alignment-baseline","middle")
+  .append("textPath")
+  .attr("xlink:href",function(d,i){return "#s"+i;})
+  .attr("startOffset",function(d,i){if (d.name=="Kerndatensatz Forschung") {return 0;} 
+  else if (d.name.lastIndexOf("Fo0", 0) === 0) {return 0.03;} 
+  else if (d.name.lastIndexOf("Na0", 0) === 0) {return 0.07;} 
+  else if (d.name.lastIndexOf("Dr0", 0) === 0) {return 0.11;} 
+  else if (d.name.lastIndexOf("Pa0", 0) === 0) {return 0.08;} 
+   else if (d.name.lastIndexOf("Pu0", 0) === 0) {return 0.23;} 
+  else if (d.name.lastIndexOf("Pe0", 0) === 0) {return 0;} 
+  else {return 0.1;} })
+            
+    .text(function(d) { if (d.name=="Kerndatensatz Forschung") {return ""} else if (d.name.lastIndexOf("Fo0", 0) === 0) {return "FP"} else if (d.name.lastIndexOf("Pe0", 0) === 0) {return "P"} else {return d.name.substring(d.name.indexOf(" ")+1);} });
+
+var textcenter = g.append("text")
+.attr("dx",0)
+.attr("x", function(d) { return y(d.y); })
+.attr("text-anchor", function(d){if (d.name=="Kerndatensatz Forschung") {return "middle";}})
+.attr("font-size",function(d){if (d.name=="Kerndatensatz Forschung") {return "150px";} else {return 0;}})
+    .text(function(d) { if (d.name=="Kerndatensatz Forschung") {return "Kerndatensatz Forschung"}  else {return "";} });
+
+
+  var textdetails = g.append("text")
+    .attr("transform", function(d) { 
+if (d.name=="Kerndatensatz Forschung") {return "rotate(0)";} else {return "rotate(" + computeTextRotation(d) + ")"; }})
+    .attr("x", function(d) { return y(d.y); })
+    .attr("dx", function(d){return 260/d.level+20;}) // margin
+    .attr("dy", "0em") // vertical-align
+    .attr("text-anchor", function(d){if (d.name=="Kerndatensatz Forschung") {return "middle";} else {return "left";}})
+    .attr("font-size",function(d){if (d.name=="Kerndatensatz Forschung") {return "100px";} else {return ((1/d.level)*40+10 + "px");}})
+    .attr("fill-opacity",function(d){return ((1/d.level-0.10));})
+    .text(function(d) { if (d.name=="Kerndatensatz Forschung") {return ""} else {return d.Nodedefinition;} });
+
+d3.selection.prototype.moveToFront = function() {
+  return this.each(function(){
+    this.parentNode.appendChild(this);
+  });
+};
+
+
+  function click(d) {
+    // fade out all text elements
+    text.transition().attr("opacity", 0);
+
+    path.transition()
+      .duration(750)
+      .attrTween("d", arcTween(d))
+      .each("end", function(e, i) {
+          // check if the animated element's data e lies within the visible angle span given in d
+          if (e.x >= d.x && e.x < (d.x + d.dx)) {
+            // get a selection of the associated text element
+            var arcText = d3.select(this.parentNode).select("text");
+            // fade in the text element and recalculate positions
+            arcText.transition().duration(750)
+              .attr("opacity", 1)
+              .attr("transform", function() { return "rotate(" + computeTextRotation(e) + ")" })
+              .attr("x", function(d) { return y(d.y); });
+          }
+      });
+  }
+  
+  var sel = d3.select("text");
+  sel.moveToFront();
+  
+});
+
+d3.select(self.frameElement).style("height", height + "px");
+
+// Interpolate the scales!
+function arcTween(d) {
+  var xd = d3.interpolate(x.domain(), [d.x, d.x + d.dx]),
+      yd = d3.interpolate(y.domain(), [d.y, 1]),
+      yr = d3.interpolate(y.range(), [d.y ? 20 : 0, radius]);
+  return function(d, i) {
+    return i
+        ? function(t) { return arc(d); }
+        : function(t) { x.domain(xd(t)); y.domain(yd(t)).range(yr(t)); return arc(d); };
+  };
+}
+
+function computeTextRotation(d) {
+  return (x(d.x + d.dx / 2) - Math.PI / 2) / Math.PI * 180;
+}
+
+</script>
